@@ -1,5 +1,6 @@
 import generalConfig from "../../cypress/fixtures/general_config";
 import ContentCheck from "../page_checks/content_check";
+import BrowserActions from "./browser_actions";
 
 class ClickAction {
     /**
@@ -48,47 +49,81 @@ class ClickAction {
     }
 
     /**
-     * For product selection page
-     * changes the product category tab navigation product selection page, for instance from to the first tab (usually  ski)
+     * Cookie consent aggrement
+     * It finds and clicks the cookie consent agreement
      */
-    selectFirstProductCategoryTab() {
-        cy.wait(500);
-        cy.get('app-product-list-categories ul#equipment-tabs li:nth-child(1)')
-            .should('be.visible')
+    clickAgreeToCookieConsent() {
+        cy.get('app-cookie-consent a.btn-primary-custom')
             .click();
     }
 
     /**
      * For product selection page
-     * changes the product category tab navigation product selection page, for instance from ski to shoes, or from ski to snowboards
+     * changes the product category tab navigation product selection page
      */
-    selectSecondProductCategoryTab() {
+    selectProductCategoryTab(category) {
         cy.wait(500);
-        cy.get('app-product-list-categories ul#equipment-tabs li:nth-child(2)')
+        cy.get(`ul#equipment-tabs li:nth-child(${category})`)
             .should('be.visible')
             .click();
+        cy.wait(500);
     }
+
 
     /**
      * For product selection page
+     * about opening and closing the modal for mobile usage
      * clicks "add equipment" and opens the modal for later selecting products
      * the #id for selector is part of our frontend architecture, we use person_0, person_1, person_2 and so on...
      */
+    // when the person has no product assigned
     openMobileProductSelectionModal(personNumber) {
         cy.wait(500);
         cy.get(`div.product#${personNumber} button`)
             .should('be.visible')
             .click({waitForAnimations: false}); // TODO: {waitForAnimations: false} fix for webkit is not a good idea
+        cy.wait(1000);
     }
+
+    // when the person has a product assigned already
+    openMobileProductSelectionModalAssigned(personNumber) {
+        cy.wait(500);
+        cy.get(`div.product#${personNumber} div.user-name strong`)
+            .should('be.visible')
+            .click({waitForAnimations: false}); // TODO: {waitForAnimations: false} fix for webkit is not a good idea
+        cy.wait(1500); // this timeout is important, because there is a feature which scrolls down to the product (only if the person has a product assigned already)
+    }
+
+    // closes the modal for product selection
+    closeMobileProductSelectionModal(){
+        cy.wait(500);
+        cy.get(`app-product-list-modal button.back-button`)
+            .should('be.visible')
+            .click({waitForAnimations: false}); // TODO: {waitForAnimations: false} fix for webkit is not a good idea
+    }
+
+
+    /**
+     * For product selection page dektop
+     *
+     * search for the right person and select
+     */
+    selectPersonProductSelectionDesktop(personNth){
+        cy.wait(500);
+        cy.get(`app-person-switcher div.person-wrapper:nth-child(${personNth})`)
+            .should('be.visible')
+            .click();
+    }
+
 
     /**
      * For product selection page
      * clicks on the first product into product-item-list
      */
-    addFirstListedProduct() {
+    addProduct(mainProduct) {
         cy.wait(500);
-        cy.get('div#product-item-list div.product-item:nth-child(1) button.btn-primary')
-            .should('be.visible')
+        cy.get(`div#product-item-list div.product-item:nth-child(${mainProduct}) button.btn-primary`)
+            //.should('be.visible') todo: for mobile the issue is: we should first scroll to the product, otherwise its not visible and the test fails
             .click({waitForAnimations: false}); // TODO: {waitForAnimations: false} fix for webkit is not a good idea
     }
 
@@ -97,9 +132,9 @@ class ClickAction {
      * find the first product pill
      * adds the first product add-on item in the add-on list
      */
-    addFirstListedProductFirstListedSubProduct() {
+    addProductSubProduct(mainProduct, subProduct) {
         cy.wait(500);
-        cy.get('div#product-item-list div.product-item:nth-child(1) div.service:nth-child(1) app-toggle')
+        cy.get(`div#product-item-list div.product-item:nth-child(${mainProduct}) div.service:nth-child(${subProduct}) app-toggle`)
             //.should('be.visible') // todo: for mobile the issue is: we should first scroll to the product, otherwise its not visible and the test fails
             .click();
     }
@@ -121,7 +156,7 @@ class ClickAction {
      * switch for desktop and mobile (different selectors)
      */
     addPersonButtonInProductSelection(){
-        cy.wait(500);
+        cy.wait(1000);
         if (generalConfig.viewportWidth < generalConfig.breakpoints.desktopSmall) {
             // mobile behave here
             cy.get(' button.add-person') // todo: if it is out of view-port, it will break!
@@ -129,19 +164,33 @@ class ClickAction {
                 .click();
         } else {
             // desktop behave here
-            cy.get('div.products button.btn') // todo: if it is out of view-port, it will break!
+            cy.get('app-person-switcher button.btn') // todo: if it is out of view-port, it will break!
                 .should('be.visible')
                 .click();
         }
+        cy.wait(2000); // we have to wait, otherwise when the product assignment process starts, we get in troubles.
     }
 
     /**
      * For product selection page
-     * remove the last person of the app-person-switcher component, and in the cart also
+     * desktop: remove the last person of the app-person-switcher component, and in the cart also
+     *
      */
-    removeLastPersonFromFromCart(){
+    removePersonFromFromCart(personNumber){
         cy.wait(500);
-        cy.get('app-person-switcher div.person-wrapper:last-child app-icon[name="bin"]') // todo: if it is out of view-port, it will break!
+        cy.get(`app-person-switcher div.person-wrapper:nth-child(${personNumber}) app-icon[name="bin"]`)
+            .should('be.visible')
+            .click()
+            .log('Notice: last person removed successful');
+    }
+
+    /**
+     * For product selection page
+     * mobile: remove the last person of the app-person-switcher component, and in the cart also
+     */
+    removePersonFromFromCartMobile(personNumber){
+        cy.wait(500);
+        cy.get(`div.products div#${personNumber} app-icon[name="bin"]`) // todo: if it is out of view-port, it will break!
             .should('be.visible')
             .click()
             .log('Notice: last person removed successful');
@@ -153,11 +202,9 @@ class ClickAction {
      */
     clickMainContinueButton(){
         cy.wait(1500);
-        cy.get('app-cart-sidebar button[type="button"].btn-primary') // todo: if it is out of view-port, it will break because of visible... !
+        cy.get('app-cart-sidebar button[type="button"].btn-primary.justify-content-center') // todo: if it is out of view-port, it will break... !
             .should('be.visible').click();
     }
-
-
 
     /**
      * For product selection page

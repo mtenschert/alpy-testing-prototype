@@ -20,10 +20,30 @@ class BrowserActions {
      * Useful for quickly testing the behavior of pages when navigating backward.
      */
     goBack() {
+        cy.wait(500);
         cy.go('back');
+        cy.wait(1500);
     }
 
-    // more methods/actions related to browser interactions here...
+    /**
+     * Scroll top event
+     *
+     * Get element via argument
+     */
+    scrollTopEvent(ElementSelector) {
+        cy.get(`${ElementSelector}`)
+            .scrollTo('top'); // todo: for mobile-view only, because if you open the mobile modal for a person, we scroll automatically to the product, the main navigation is not visible then...
+    }
+
+
+    /**
+     * Scroll until the element comes into the view
+     *
+     * Get element via argument
+     */
+    scrollIntoView(ElementSelector) {
+        cy.get(`${ElementSelector}`).scrollIntoView();
+    }
 
 }
 
